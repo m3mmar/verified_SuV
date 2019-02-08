@@ -1,0 +1,167 @@
+Important non MMIO registers influencing execution of instructions
+-----------------------------------------------------------
+SREG (8bit) PORT 0x3F(0x5F)
+32 GP regs (8bit) (includes XYZ 16bit  indirect addressing registers) 0x00-0x1F
+PC (16bit) only jump/branch/call instr can modify this. no reading
+SP (16bit) PORT 0x3E-0x3D(0x5E-0x5D): stack pointer
+
+These registers are typically referenced immediately in instruction (e.g. LDI for GP reg or OUT/IN for ports) but are MMIO (e.g. GP: 0x00-0x1F) as well!
+
+Important MMIO registers
+-------------------------
+-Interrupt unit address space
+-RAMPx registers? (8bit) --> influences addressing of >16bit addresses
+RAMPZ: PORT 0x3B (0x5B)
+
+---> all MMIO in 0x00-0xFF can be modified/accessed through ST/STS/STD and LD/LDS/LDD instructions
+
+---> PORT registers in 0x00-0x3F (MMIO 0x20-0x5F) can aditionally be modified accessed through OUT/IN
+
+Check memory accesses
+-----------------------
+Port reg write protection:
+	- OUT,
+	- Lower 32 ports: SBI, CBI,
+	- SREG: BCLR, BSET, all SREG bit clear/set syntactic sugar following from this.
+	(E.g. for SREG I flag specifically: CLI == BCLR 7, SEI == BSET 7)
+Port reg read protection:
+	- IN,
+	- Lower 32 ports: SBIC, SBIS,
+	- SREG: a lot of BR** branch instructions (disalowing this is a bit too crazy)
+
+SRAM Write protection:
+	- ST, STD and STS calls have to be checked
+SRAM Read protection:
+	- LD, LDD and LDS calls have to be checked (we can do without for a viable solution for secure erasure)
+SPECIAL CASE: Stack operations.
+	- PUSH and POP have to be checked
+	- MAYBE: We prohibit changing SPH and SPL through SRAM write (MMIO, via ST*) and PORT write (via OUT)
+
+Flash write protection:
+	- on AVR not required, only Bootloader in rom can execute these instructions
+Flash read protection:
+	- LPM and ELPM need to be checked
+
+
+Avoid branching to unsafe operations
+-------------------------------------
+Check RJMP, IJMP, JMP, RCALL, ICALL, RET, RETI, BR** and CALL (only if jump outside of sanity checkers in ROM so we do not mess up our mechanism)
+
+Check mechanism
+----------------
+Argument passing:
+- Registers arguments:
+  - Virtual register: store Rx at 0x100 prior to safe call
+  - Reserve e.g. R2 in the compiler. Copy Rx to R2 prior to safe call
+    (Use -ffixed-r2 in CFLAGs. To make available in C-world:
+    http://www.nongnu.org/avr-libc/user-manual/FAQ.html#faq_regbind)
+    WARNING: either avoid using libc or recompile avr-libc with -ffixed-r2
+  - It would be possible to duplicate safe instructions for each of the 32 GP
+    regs. This would be unscalable if we do it with the immediate arguments as
+    well.
+- Immediate arguments:
+  - Put a .word 0xXXXX after safe call, with 0x0000 a safe instruction. General
+    idea: we can't store immediates in virtual registers, because that would
+    mean moving them through a real register first --> just store on the spot
+    in PROGMEM. Use ret+1 as return address.
+  - Reserve another GP reg (e.g. R3) to store immediates prior to safe call.
+  - When not so many possiblities: duplicate safe instruction. E.g.: std y+5
+    --> call safe_std_y_5. In this case 63 safe instructions required.
+
+/*****************************************/
+/* DATA ACCESS INSTRUCTIONS (WRITE ONLY) */
+/*****************************************/
+
+OUT 0x00-0x3f, Rx
+--> Check at load time
+--> ALTERNATIVE: if we need bit granularity checking, check at runtime:
+STS 0x100, Rx (Or save to reserved reg)
+CALL SAFE_OUT
+.word 0x0000 - 0x003f
+===========================================
+SBI/CBI 0x00-0x1F, 0-7
+---->
+just check at load time
+===========================================
+BSET/BCLR 0-8
+--->
+just check at load time
+===========================================
+STS k, Rx
+--->
+Check k at load time
+!! SPECIAL CAUTION !!
+This is a two word op, just as its counterpart LDS. On a 1284p however, no
+special care should be taken as the 2nd word argument always is in
+0x0000-0x3FFF. None of the opcodes in that region is (potentially) unsafe. If
+an attacker constructs a STS with an unsafe 2nd word, it should be rejected
+by the standard verification checks.
+===========================================
+
+
+ST X-Z, Rx  (have seperate for (-)X(+),(-)Y(+),(-)Z(+) --> 9 routines
+--->
+STS 0x100, Rx (Or save to reserved reg)
+CALL SAFE_ST_Z+
+===========================================
+STD (Y-Z)+q, Rx (q is 0-63)
+--->
+STS 0x100, Rx (Or save to reserved reg)
+CALL SAFE_STD_Y
+.word 0x00qq
+==========================================
+PUSH/POP Rx
+--->
+STS 0x100, Rx (Or save to reserved reg)
+CALL SAFE_PUSH
+---> OPTIMIZATION: Only check push for stack overflow. Underflow not possible,
+so pop does not need to be checked
+==========================================
+
+
+/*********************************/
+/* CONTROL TRANSFER INSTRUCTIONS */
+/*********************************/
+
+RJMP/RCALL k
+----->
+We have to test this at load time. We know PC and k, just check if the jump is
+within bounds of what is permitted.
+==========================================
+JMP/CALL 0x0000-0xFFFF
+---->
+Check at load time.
+!! SPECIAL CAUTION !!
+Do not allow jumps to any of the 2nd word unsafe opcodes.
+Check this both at load time and at run time
+==========================================
+BRANCH
+------>
+Check at load time if we don't branch to anything illegal
+==========================================
+
+
+IJMP/ICALL
+---->
+CALL SAFE_IJMP/ICALL
+For ICALL: check Z + do IJMP. RET addr is already OK on stack
+==========================================
+RET
+------>
+JMP SAFE_RET
+(JMP because we do not need the ret addr)
+We check stack for return address and if OK exec RET
+==========================================
+RETI
+------>
+JMP SAFE_RETI
+(JMP because we do not need the ret addr)
+We check stack for return address and if OK exec RETI
+==========================================
+
+Notes:
+https://sourceware.org/binutils/docs-2.21/as/AVR_002dModifiers.html#AVR_002dModifiers
+https://lists.gnu.org/archive/html/bug-binutils/2011-08/msg00111.html
+http://lyons42.com/AVR/Opcodes/AVRAllOpcodes.html
+http://www.atmel.com/images/doc8059.pdf
+http://www.atmel.com/images/atmel-0856-avr-instruction-set-manual.pdf

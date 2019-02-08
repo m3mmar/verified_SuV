@@ -1,0 +1,1 @@
+.provides ./bootloader_progmem.h#pgm_read_word_far_no_rampz

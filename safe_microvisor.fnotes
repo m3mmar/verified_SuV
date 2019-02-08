@@ -1,0 +1,85 @@
+ -----------------------
+| Pre-deployment parser |
+ -----------------------
+- Do substitutions (DONE)
+- Generate deployment image with metadata (DONE)
+- Generate hex image with metadata (DONE)
+
+Substitutions
+--------------
+ret --> jmp safe_ret
+reti --> jmp safe_reti
+ijmp --> jmp safe_icall_ijmp
+icall --> call safe_icall_ijmp
+
+Deployment image
+-----------------
+- For now do not allow progmem
+- Hex is relocated for normal address space starting at 0x0000, minus the but
+  bootloader space.
+
+- Log 2 word instructions (JMP/CALL) with illegal 2nd word in list that gets prepended to
+  deployment hex.
+- Log .data start. Do not allow any jumps past that point except for
+  bootloader entry points.
+- Example binary deployment format:
+   ---------------
+  | total size    |
+   ---------------
+  | .data start   | --> __data_load_start symbol. This is typically the same as size(.text) in case there are no other "surprise" sections.
+   ---------------
+  | nr 2nd word i |
+   ---------------
+  | 2nd word i 1  |
+   ---------------
+  | 2nd word i 2  |
+   ---------------
+  | ....          |
+   ---------------
+  | .text + .data |
+   ---------------
+
+ ----------------------------
+| Bootloader section on mote |
+ ----------------------------
+- safe_ ASM subroutines (semi-DONE --> still do actual check)
+- Remote attestation function
+- Deployment fuction
+
+Add cli + sei to bootloader subroutines? --> yes, otherwise a 3rd party ISR can
+modify local variables of bootloader subroutines on stack and make e.g. a ret
+jump to arbitrary point
+
+For ease of deployment instr checking: save entrypoint pointer table in PROGMEM.
+
+Deployment function
+--------------------
+- Load to APP (deploy) and APP meta (deploy)
+- Do checks
+- Copy to APP (running) and APP meta (running)
+
+   ---------------
+  | APP (running) | --> 0x0000 (0xFD00 - 63.25K)
+   ---------------
+  | APP meta (rn) | --> 0xFD00 (0x100 - 0.25K - 256 bytes)
+   ---------------
+  | APP (deploy)  | --> 0xFE00 (0xFD00 - 63.25K)
+   ---------------
+  | APP meta (dp) | --> 0x1FB00 (0x100 - 0.25K - 256 bytes)
+   ---------------
+  | BOOTLOADER    | --> 0x1FC00 (0x400 - 1K)
+   ---------------
+                                (128K total)
+
+   ---------------
+  | APP (running) | --> 0x0000 (0xFB00 - 62.75K)
+   ---------------
+  | APP meta (rn) | --> 0xFB00 (0x100 - 0.25K - 256 bytes)
+   ---------------
+  | APP (deploy)  | --> 0xFC00 (0xFB00 - 62.75K)
+   ---------------
+  | APP meta (dp) | --> 0x1F700 (0x100 - 0.25K - 256 bytes)
+   ---------------
+  | BOOTLOADER    | --> 0x1F800 (0x800 - 2K) --> 0xFC00 in fuses
+   ---------------
+                                (128K total)

@@ -1,0 +1,489 @@
+package java.lang;
+
+import java.util.Iterator;
+
+/*@
+
+inductive unit = unit;
+
+inductive pair<a, b> = pair(a, b);
+
+inductive option<t> = none | some(t);
+
+fixpoint t the<t>(option<t> o) {
+    switch (o) {
+        case none: return default_value;
+        case some(v): return v;
+    }
+}
+
+fixpoint a fst<a, b>(pair<a, b> p) {
+    switch (p) {
+        case pair(x, y): return x;
+    }
+}
+
+fixpoint b snd<a, b>(pair<a, b> p) {
+    switch (p) {
+        case pair(x, y): return y;
+    }
+}
+
+fixpoint int abs(int x) {
+    return 0 <= x ? x : - x; 
+}
+
+fixpoint t default_value<t>();
+
+inductive boxed_int = boxed_int(int);
+fixpoint int unboxed_int(boxed_int i) { switch (i) { case boxed_int(value): return value; } }
+
+inductive boxed_bool = boxed_bool(boolean);
+fixpoint boolean unboxed_bool(boxed_bool b) { switch (b) { case boxed_bool(value): return value; } }
+
+lemma_auto(x%y) void modulo_nonnegative(int x, int y);
+    requires 0 <= x && 0 < y;
+    ensures 0 <= x % y && x % y < y;
+  
+lemma_auto void modulo_div(int x, int y);
+    requires y != 0;
+    ensures y * (x / y) + x % y == x;
+
+lemma_auto void shiftright_div(int x);
+    requires 0 <= x;
+    ensures x >> 1 == x / 2;
+
+lemma_auto(x & y) void bitand_nonnegative(int x, int y);
+    requires 0 <= x && 0 <= y;
+    ensures 0 <= (x & y) && (x & y) <= x && (x & y) <= y;
+
+lemma_auto void bitand_modulo(int x);
+    requires 0 <= x;
+    ensures x % 2 == (x & 1);
+
+predicate class_init_token(Class c;);
+
+fixpoint boolean Class_lt(Class c1, Class c2);
+predicate call_perm_(Class c;);
+predicate call_below_perm_(Class c;);
+
+predicate array_element<T>(T[] array, int index; T value);
+predicate array_slice<T>(T[] array, int start, int end; list<T> elements);
+predicate array_slice_deep<T, A, V>(T[] array, int start, int end, predicate(A, T; V) p, A info; list<T> elements, list<V> values);
+
+lemma_auto void array_element_inv<T>();
+    requires [?f]array_element<T>(?array, ?index, ?value);
+    ensures [f]array_element<T>(array, index, value) &*& array != null &*& 0 <= index &*& index < array.length;
+
+lemma_auto void array_slice_inv<T>();
+    requires [?f]array_slice<T>(?array, ?start, ?end, ?elems);
+    ensures [f]array_slice<T>(array, start, end, elems) &*& array != null &*& 0 <= start &*& start <= end &*& end <= array.length &*& start + length(elems) == end &*& end <= Integer.MAX_VALUE;
+
+lemma_auto void array_slice_deep_inv<T, A, V>();
+    requires [?f]array_slice_deep<T, A, V>(?array, ?start, ?end, ?p, ?info, ?elems, ?vs);
+    ensures [f]array_slice_deep<T, A, V>(array, start, end, p, info, elems, vs) &*& array != null &*& 0 <= start &*& start <= end &*& end <= array.length &*& start + length(elems) == end &*& start + length(vs) == end;
+
+lemma void array_slice_deep_close<T, A, V>(T[] array, int start, predicate(A, T; V) p, A a);
+    requires [?f]array_slice<T>(array, start, start + 1, ?elems) &*& [f]p(a, head(elems), ?v);
+    ensures [f]array_slice_deep<T, A, V>(array, start, start + 1, p, a, elems, cons(v, nil));
+
+lemma void array_slice_deep_close_precise<T, A, V>(real f, T[] array, int start, predicate(A, T; V) p, A a);
+    requires [f]array_slice<T>(array, start, start + 1, ?elems) &*& [f]p(a, head(elems), ?v);
+    ensures [f]array_slice_deep<T, A, V>(array, start, start + 1, p, a, elems, cons(v, nil));
+
+lemma void array_slice_deep_open<T, A, V>(T[] array, int start);
+    requires array_slice_deep<T, A, V>(array, start, start + 1, ?p, ?a, ?elems, ?vs);
+    ensures array_slice<T>(array, start, start + 1, elems) &*& p(a, head(elems), head(vs));
+
+lemma void array_slice_deep_open_precise<T, A, V>(real f, T[] array, int start);
+    requires [f]array_slice_deep<T, A, V>(array, start, start + 1, ?p, ?a, ?elems, ?vs);
+    ensures [f]array_slice<T>(array, start, start + 1, elems) &*& [f]p(a, head(elems), head(vs)) &*& elems == cons(head(elems), tail(elems)) &*& vs == cons(head(vs), tail(vs));
+
+lemma void array_slice_split<T>(T[] array, int start, int start1);
+    requires array_slice<T>(array, start, ?end, ?elems) &*& start <= start1 &*& start1 <= end;
+    ensures
+        array_slice<T>(array, start, start1, take(start1 - start, elems)) &*&
+        array_slice<T>(array, start1, end, drop(start1 - start, elems)) &*&
+        elems == append(take(start1 - start, elems), drop(start1 - start, elems));
+
+lemma void array_slice_join<T>(T[] array, int start);
+    requires
+        array_slice<T>(array, start, ?start1, ?elems1) &*& array_slice<T>(array, start1, ?end, ?elems2);
+    ensures array_slice<T>(array, start, end, append(elems1, elems2));
+
+lemma void array_slice_deep_split<T, A, V>(T[] array, int start, int start1);
+    requires [?f]array_slice_deep<T, A, V>(array, start, ?end, ?p, ?a, ?elems, ?vs) &*& start <= start1 &*& start1 <= end;
+    ensures
+        [f]array_slice_deep<T, A, V>(array, start, start1, p, a, take(start1 - start, elems), take(start1 - start, vs)) &*&
+        [f]array_slice_deep<T, A, V>(array, start1, end, p, a, drop(start1 - start, elems), drop(start1 - start, vs));
+
+lemma void array_slice_deep_split_precise<T, A, V>(real f, T[] array, int start, int end, predicate(A, T; V) p, A a, int start1);
+    requires [f]array_slice_deep<T, A, V>(array, start, end, p, a, ?elems, ?vs) &*& start <= start1 &*& start1 <= end;
+    ensures
+        [f]array_slice_deep<T, A, V>(array, start, start1, p, a, take(start1 - start, elems), take(start1 - start, vs)) &*&
+        [f]array_slice_deep<T, A, V>(array, start1, end, p, a, drop(start1 - start, elems), drop(start1 - start, vs));
+
+lemma void array_slice_deep_join<T, A, V>(T[] array, int start);
+    requires
+        array_slice_deep<T, A, V>(array, start, ?start1, ?p, ?a, ?elems1, ?vs1) &*&
+        array_slice_deep<T, A, V>(array, start1, ?end, p, a, ?elems2, ?vs2);
+    ensures array_slice_deep<T, A, V>(array, start, end, p, a, append(elems1, elems2), append(vs1, vs2));
+
+lemma void array_slice_deep_join_precise<T, A, V>(real f, T[] array, int start, int start1, predicate(A, T; V) p, A a, int end);
+    requires
+        [f]array_slice_deep<T, A, V>(array, start, start1, p, a, ?elems1, ?vs1) &*&
+        [f]array_slice_deep<T, A, V>(array, start1, end, p, a, ?elems2, ?vs2);
+    ensures [f]array_slice_deep<T, A, V>(array, start, end, p, a, append(elems1, elems2), append(vs1, vs2));
+
+lemma void array_slice_deep_empty_close<T, A, V>(T[] array, int start, predicate(A, T; V) p, A a);
+    requires array != null &*& 0 <= start &*& start <= array.length;
+    ensures array_slice_deep<T, A, V>(array, start, start, p, a, nil, nil);
+
+predicate exists<t>(t x;) = true;
+
+@*/
+
+public class Object {
+    
+    public Object();
+        //@ requires emp;
+        //@ ensures emp;
+        //@ terminates;
+    
+}
+
+public class Class {}
+
+public class Throwable {
+    
+    public Throwable();
+        //@ requires emp;
+        //@ ensures emp;
+    
+}
+
+public class Exception extends Throwable {
+    
+    public Exception();
+        //@ requires emp;
+        //@ ensures emp;
+    
+}
+
+public class Error extends Throwable {
+    
+    public Error();
+        //@ requires emp;
+        //@ ensures emp;
+    
+}
+
+public class InterruptedException {
+    
+    public InterruptedException();
+        //@ requires emp;
+        //@ ensures emp;
+    
+}
+
+public class RuntimeException extends Exception {
+    
+    public RuntimeException();
+        //@ requires true;
+        //@ ensures true;
+    
+    public RuntimeException(Object innerException);
+        //@ requires true;
+        //@ ensures true;
+    
+}
+
+public class ArrayIndexOutOfBoundsException extends RuntimeException {
+}
+
+public class IllegalArgumentException extends RuntimeException {
+}
+
+public class NullPointerException extends RuntimeException {
+}
+
+public class UnsupportedOperationException extends RuntimeException {
+}
+
+public class Byte {
+    
+    public static final byte MIN_VALUE = -128;
+    public static final byte MAX_VALUE = 127;
+    
+}
+
+public class Short {
+    
+    public static final short MIN_VALUE = -32768;
+    public static final short MAX_VALUE = 32767;
+    
+}
+
+//@ fixpoint int Integer_intValue(Integer i);
+
+public class Integer {
+
+    public Integer(int v);
+        //@ requires emp;
+        //@ ensures Integer_intValue(this) == v;
+        //@ terminates;
+
+    public static final int MAX_VALUE = 0x7fffffff;
+    public static final int MIN_VALUE = -0x80000000;
+ 
+    public static int parseInt(String s);
+        //@ requires s != null;
+        //@ ensures true;
+        //@ terminates;
+
+    public static Integer valueOf(int v);
+        //@ requires emp;
+        //@ ensures result != null &*& Integer_intValue(result) == v;
+        //@ terminates;
+
+    public int intValue();
+        //@ requires true;
+        //@ ensures result == Integer_intValue(this);
+        //@ terminates;
+    
+}
+
+//@ fixpoint boolean Boolean_booleanValue(Boolean b);
+
+public class Boolean {
+
+    public Boolean(boolean b);
+        //@ requires emp;
+        //@ ensures Boolean_booleanValue(this) == b;
+        
+    public static Boolean valueOf(boolean b);
+        //@ requires emp;
+        //@ ensures result != null &*& Boolean_booleanValue(result) == b;
+    
+    public boolean booleanValue();
+        //@ requires true;
+        //@ ensures result == Boolean_booleanValue(this);
+}
+
+/*@
+
+inductive array_slice_elems =
+  array_slice_bytes(list<byte>)
+| array_slice_ints(list<int>)
+| array_slice_Objects(list<Object>);
+
+fixpoint array_slice_elems take_dynamic(int n, array_slice_elems es) {
+    switch (es) {
+        case array_slice_bytes(bs): return array_slice_bytes(take(n, bs));
+        case array_slice_ints(is): return array_slice_ints(take(n, is));
+        case array_slice_Objects(os): return array_slice_Objects(take(n, os));
+    }
+}
+
+fixpoint array_slice_elems drop_dynamic(int n, array_slice_elems es) {
+    switch (es) {
+        case array_slice_bytes(bs): return array_slice_bytes(drop(n, bs));
+        case array_slice_ints(is): return array_slice_ints(drop(n, is));
+        case array_slice_Objects(os): return array_slice_Objects(drop(n, os));
+    }
+}
+
+inductive array_slice_elemtype = array_slice_byte | array_slice_int | array_slice_Object;
+
+predicate array_slice_dynamic(array_slice_elemtype type, Object array, int start, int end; array_slice_elems elems) =
+    switch (type) {
+        case array_slice_byte: return array_slice<byte>(^array, start, end, ?bs) &*& elems == array_slice_bytes(bs);
+        case array_slice_int: return array_slice<int>(^array, start, end, ?is) &*& elems == array_slice_ints(is);
+        case array_slice_Object: return array_slice<Object>(^array, start, end, ?os) &*& elems == array_slice_Objects(os);
+    };
+
+predicate arraycopy_pre(array_slice_elemtype type, boolean overlap, real frac, Object src, int srcPos, int length, array_slice_elems elems, Object dest, int destPos;) =
+    overlap ?
+        dest == src &*&
+        srcPos <= destPos ?
+            [frac]array_slice_dynamic(type, src, srcPos, destPos, take_dynamic(destPos - srcPos, elems)) &*&
+            array_slice_dynamic(type, src, destPos, srcPos + length, drop_dynamic(destPos - srcPos, elems)) &*&
+            array_slice_dynamic(type, src, srcPos + length, destPos + length, _)
+        :
+            array_slice_dynamic(type, src, destPos, srcPos, _) &*&
+            array_slice_dynamic(type, src, srcPos, destPos + length, take_dynamic(destPos + length - srcPos, elems)) &*&
+            [frac]array_slice_dynamic(type, src, destPos + length, srcPos + length, drop_dynamic(destPos + length - srcPos, elems))
+    :
+        [frac]array_slice_dynamic(type, src, srcPos, srcPos + length, elems) &*& array_slice_dynamic(type, dest, destPos, destPos + length, _);
+
+predicate arraycopy_post(array_slice_elemtype type, boolean overlap, real frac, Object src, int srcPos, int length, array_slice_elems elems, Object dest, int destPos;) =
+    overlap ?
+        srcPos <= destPos ?
+            [frac]array_slice_dynamic(type, src, srcPos, destPos, take_dynamic(destPos - srcPos, elems)) &*&
+            array_slice_dynamic(type, src, destPos, destPos + length, elems)
+        :
+            array_slice_dynamic(type, src, destPos, destPos + length, elems) &*&
+            [frac]array_slice_dynamic(type, src, destPos + length, srcPos + length, drop_dynamic(destPos + length - srcPos, elems))
+    :
+        [frac]array_slice_dynamic(type, src, srcPos, srcPos + length, elems) &*& array_slice_dynamic(type, dest, destPos, destPos + length, elems);
+
+@*/
+
+public class PrintStream {
+
+    void println(String s);
+        //@ requires true;
+        //@ ensures true;
+
+    void print(String s);
+        //@ requires true;
+        //@ ensures true;
+
+    void print(int i);
+        //@ requires true;
+        //@ ensures true;
+}
+
+public class System {
+    
+    static final PrintStream out;
+
+    public static void arraycopy(Object src, int srcPos, Object dest, int destPos, int length); // TODO: - Support more element types.
+        //@ requires arraycopy_pre(?type, ?overlap, ?frac, src, srcPos, length, ?elems, dest, destPos);
+        //@ ensures arraycopy_post(type, overlap, frac, src, srcPos, length, elems, dest, destPos);
+    
+}
+
+//@ fixpoint list<char> charsOfString(String s);
+
+public class String{
+
+    public String();
+        //@ requires emp;
+        //@ ensures true;
+    
+    public String(byte[] src);
+        //@ requires [?f]array_slice(src, 0, src.length, ?bs);
+        //@ ensures [f]array_slice(src, 0, src.length, bs);
+    
+    public boolean equals(String other);
+        //@ requires true;
+        //@ ensures result == (charsOfString(this) == charsOfString(other));
+    
+    public int indexOf(String other);
+        //@ requires true;
+        //@ ensures result >= (-1);
+    
+    public String substring(int begin, int end);
+        //@ requires begin >= 0;
+        //@ ensures result != null;
+    
+    public int length();
+        //@ requires true;
+        //@ ensures result >= 0;
+    
+    public boolean matches(String regex);
+        //@ requires true;
+        //@ ensures true;
+    
+    public boolean contains(String regex);
+        //@ requires true;
+        //@ ensures true;
+    
+    public static String valueOf(int value);
+        //@ requires true;
+        //@ ensures result != null;
+    
+    public byte[] getBytes();
+        //@ requires true;
+        //@ ensures result != null &*& array_slice(result, 0, result.length, _) &*& 0 <= result.length;
+    
+    public String trim();
+        //@ requires true;
+        //@ ensures result != null;
+    
+}
+
+public interface Runnable {
+    
+    //@ predicate pre();
+    //@ predicate post();
+    
+    public void run();
+        //@ requires pre();
+        //@ ensures post();
+    
+}
+
+public class Thread {
+    
+    static final int MAX_PRIORITY = 10;
+    
+    //@ predicate Thread(Runnable r, boolean started);
+    
+    public Thread(Runnable r);
+        //@ requires true;
+        //@ ensures Thread(r, false);
+    
+    void start();
+        //@ requires Thread(?r, false) &*& r.pre();
+        //@ ensures Thread(r, true);
+    
+    void setPriority(int newPriority);
+        //@ requires Thread(?r, false);
+        //@ ensures Thread(r, false);
+    
+}
+
+public class StringBuffer{
+    
+    //@ predicate StringBuffer();
+    
+    StringBuffer();
+        //@ requires emp;
+        //@ ensures StringBuffer();
+    
+    StringBuffer append(StringBuffer b);
+        //@ requires StringBuffer() &*& [?f]b.StringBuffer();
+        //@ ensures StringBuffer() &*& [f]b.StringBuffer() &*& result == this;
+    
+    StringBuffer append(String string);
+        //@ requires StringBuffer();
+        //@ ensures StringBuffer() &*& result == this;
+    
+    public String toString();
+        //@ requires [?f]StringBuffer();
+        //@ ensures [f]StringBuffer() &*& result != null;
+    
+}
+
+/*@
+
+predicate_family Iterable_iterating(Class c)(Iterable i, list<Object> elements, real frac, Iterator it;);
+
+@*/
+
+public interface Iterable<T> {
+    
+    //@ predicate Iterable(list<Object> elements);
+    
+    Iterator<T> iterator();
+        //@ requires [?f]Iterable(?es1);
+        /*@ ensures  result.Iterator(?es2, none, 0) &*&
+                     (f == 1 ? result.Iterator_removals(nil) : true) &*&
+                     Iterable_iterating(this.getClass())(this, es1, f, result);
+        @*/
+
+    /*@
+    
+    lemma void destroyIterator();
+        requires Iterable_iterating(this.getClass())(this, ?es, ?f, ?it) &*& f == 1 &*&
+                 it.Iterator(_, _, _) &*& it.Iterator_removals(?rs);
+        ensures  Iterable(?es1);
+    
+     lemma void destroyIteratorFrac();
+        requires Iterable_iterating(this.getClass())(this, ?es, ?f, ?it) &*& f < 1 &*& it.Iterator(_, _, _);
+        ensures  [f]Iterable(es);
+    
+    @*/
+}

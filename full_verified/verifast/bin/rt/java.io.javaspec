@@ -1,0 +1,155 @@
+package java.io;
+
+import java.lang.Exception;
+
+public class IOException extends Exception {
+    
+    public IOException();
+       //@ requires emp;
+       //@ ensures emp;
+    
+}
+
+public class ClosedChannelException extends IOException {}
+
+public interface InputStream {
+    
+    //@ predicate InputStream();
+    
+    public int read();
+        //@ requires InputStream();
+        //@ ensures InputStream();
+    
+    public void close();
+        //@ requires InputStream();
+        //@ ensures emp;
+    
+}
+
+public interface Reader {
+    
+    //@ predicate Reader();
+    
+}
+
+public class InputStreamReader implements Reader {
+    
+    //@ predicate InputStreamReader(InputStream s);
+    
+    public InputStreamReader(InputStream s);
+        //@ requires s.InputStream();
+        //@ ensures Reader() &*& [_]InputStreamReader(s);
+    
+    /*@
+    
+    lemma void destroy();
+        requires Reader() &*& [_]InputStreamReader(?s);
+        ensures s.InputStream();
+    
+    @*/
+    
+}
+
+public class BufferedReader implements Reader {
+    
+    //@ predicate BufferedReader(Reader r);
+    
+    public BufferedReader(Reader r);
+        //@ requires r.Reader();
+        //@ ensures Reader() &*& [_]BufferedReader(r);
+    
+    public String readLine();
+        //@ requires Reader();
+        //@ ensures Reader() &*& result != null;
+    
+    /*@
+    
+    lemma void destroy();
+        requires Reader() &*& [_]BufferedReader(?r);
+        ensures r.Reader();
+    
+    @*/
+    
+}
+
+public interface OutputStream {
+    
+    //@ predicate OutputStream();
+    
+}
+
+public interface Writer {
+    
+    //@ predicate Writer();
+    
+    public void write(String text);
+        //@ requires Writer();
+        //@ ensures Writer();
+    
+    public void flush();
+        //@ requires Writer();
+        //@ ensures Writer();
+    
+}
+
+public class OutputStreamWriter implements Writer {
+    
+    //@ predicate OutputStreamWriter(OutputStream s);
+    
+    public OutputStreamWriter(OutputStream s);
+        //@ requires s.OutputStream();
+        //@ ensures Writer() &*& [_]OutputStreamWriter(s);
+    
+    /*@
+    
+    lemma void destroy();
+        requires Writer() &*& [_]OutputStreamWriter(?s);
+        ensures s.OutputStream();
+    
+    @*/
+    
+}
+
+public class BufferedWriter implements Writer {
+    
+    //@ predicate BufferedWriter(Writer w);
+    
+    public BufferedWriter(Writer w);
+        //@ requires w.Writer();
+        //@ ensures Writer() &*& [_]BufferedWriter(w);
+    
+    /*@
+    
+    lemma void destroy();
+        requires Writer() &*& [_]BufferedWriter(?w);
+        ensures w.Writer();
+    
+    @*/
+    
+}
+
+public class PrintWriter implements Writer {
+    
+    //@ predicate PrintWriter(Writer w);
+    
+    public PrintWriter(Writer w, boolean autoFlush);
+        //@ requires w.Writer();
+        //@ ensures Writer() &*& [_]PrintWriter(w);
+    
+    public void println(String text);
+        //@ requires Writer();
+        //@ ensures Writer();
+    
+    /*@
+    
+    lemma void destroy();
+        requires Writer() &*& [_]PrintWriter(?w);
+        ensures w.Writer();
+    
+    @*/
+    
+}
+
+public interface Serializable {
+     
+}

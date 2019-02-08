@@ -1,0 +1,21 @@
+#ifndef RANGE_H
+#define RANGE_H
+
+#include "nat.gh"
+
+fixpoint list<int> range_(int start, nat count) {
+  switch (count) {
+    case zero: return nil;
+    case succ(count0): return cons(start, range_(start + 1, count0));
+  }
+}
+
+fixpoint list<int> range(int x, int y) {
+  return x <= y ? range_(x, nat_of_int(y - x)) : nil;
+}
+
+lemma_auto(mem(z, range(x, y))) void mem_range(int x, int y, int z);
+  requires true;
+  ensures mem(z, range(x, y)) == (x <= z && z < y);
+
+#endif

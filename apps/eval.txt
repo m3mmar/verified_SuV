@@ -1,0 +1,133 @@
+Crypto
+-------
+1432 bytes --> with uvisor
+1418 bytes --> without uvisor
+
+Execution time:
+4.20291 ms --> with uvisor
+3.95301 ms --> without uvisor
+
+Verify + install time:
+71.28474 ms --> with uvisor
+71.28306 ms --> with uvisor
+71.28185 ms --> with uvisor
+71.28543 ms --> with uvisor
+71.27178 ms --> with uvisor
+
+65.96854 ms --> without uvisor
+65.97776 ms --> without uvisor
+65.96854 ms --> without uvisor
+65.95974 ms --> without uvisor
+65.97817 ms --> without uvisor
+
+Crypto with 3 extra pointers calls
+-----------------------------------
+1462 bytes --> with uvisor
+1442 bytes --> without uvisor
+
+Execution time:
+4.22755 ms --> with uvisor
+3.95390 ms --> without uvisor
+
+Verify + install time:
+71.36004 ms --> with uvisor
+71.36562 ms --> with uvisor
+71.35278 ms --> with uvisor
+71.37321 ms --> with uvisor
+71.37240 ms --> with uvisor
+
+65.97177 ms --> without uvisor
+65.97056 ms --> without uvisor
+65.97255 ms --> without uvisor
+65.97498 ms --> without uvisor
+65.97538 ms --> without uvisor
+
+Extra info, we take:
+About 0.00862666667 ms per ret check
+About 0.00790666666 ms per icall check
+
+Sensorsample (sht25 temp/hum)
+-------------------------------
+1042 bytes --> with uvisor
+1020 bytes --> without uvisor
+
+Execution time (needs to be averaged):
+67.66255 ms --> with uvisor
+67.66703 ms --> with uvisor
+67.66250 ms --> with uvisor
+67.66398 ms --> with uvisor
+67.66496 ms --> with uvisor
+67.66546 ms --> with uvisor
+
+67.61321 ms --> without uvisor
+67.61820 ms --> without uvisor
+67.61719 ms --> without uvisor
+67.61771 ms --> without uvisor
+67.61770 ms --> without uvisor
+
+Verify + install time:
+60.52144 ms --> with uvisor
+60.54505 ms --> with uvisor
+60.52379 ms --> with uvisor
+60.51537 ms --> with uvisor
+60.51767 ms --> with uvisor
+
+!! Big difference here because we are on the border of a new page
+(1042-->1020). As a result, without uvisor has to write 1 page less.
+47.12610 ms --> without uvisor
+47.13008 ms --> without uvisor
+47.12969 ms --> without uvisor
+47.14171 ms --> without uvisor
+47.11845 ms --> without uvisor
+
+Storage(write then read)
+--------------------------
+652 bytes --> with uvisor
+640 bytes --> without uvisor
+
+Execution time writing:
+870.91437 ms --> with uvisor
+870.56571 ms --> with uvisor
+870.67600 ms --> with uvisor
+870.85757 ms --> with uvisor
+870.56737 ms --> with uvisor
+
+870.41529 ms --> without uvisor
+870.09827 ms --> without uvisor
+870.41182 ms --> without uvisor
+870.65071 ms --> without uvisor
+870.46474 ms --> without uvisor
+
+Execution time reading:
+0.44751 ms --> with uvisor
+0.44752 ms --> with uvisor
+0.44752 ms --> with uvisor
+0.44752 ms --> with uvisor
+0.44752 ms --> with uvisor
+
+0.4389 ms --> without uvisor
+0.4389 ms --> without uvisor
+0.4389 ms --> without uvisor
+0.4389 ms --> without uvisor
+0.4389 ms --> without uvisor
+
+Verify + install time:
+39.99473 ms --> with uvisor
+40.00955 ms --> with uvisor
+40.00433 ms --> with uvisor
+40.02076 ms --> with uvisor
+40.01193 ms --> with uvisor
+
+37.69902 ms --> without uvisor
+37.71146 ms --> without uvisor
+37.71024 ms --> without uvisor
+37.72306 ms --> without uvisor
+37.69700 ms --> without uvisor
+
+Microvisor core
+----------------
+1096 bytes / 2048 bytes space reserved through FUSES
+
+Total flash is 128K
+
+This is without any remote attestation code or secrets

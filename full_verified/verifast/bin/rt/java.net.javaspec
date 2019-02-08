@@ -1,0 +1,57 @@
+package java.net;
+
+import java.io.*;
+
+public class SocketAddress {}
+
+public class InetSocketAddress extends SocketAddress {
+    
+    public InetSocketAddress(int port);
+        //@ requires true;
+        //@ ensures true;
+    
+}
+
+public class Socket {
+    
+    //@ predicate Socket(InputStream i, OutputStream o);
+    
+    public Socket(String host, int port);
+        //@ requires emp;
+        //@ ensures Socket(?i, ?o) &*& i.InputStream() &*& o.OutputStream();
+    
+    public InputStream getInputStream();
+        //@ requires Socket(?i, ?o);
+        //@ ensures Socket(i, o) &*& result == i;
+    
+    public OutputStream getOutputStream();
+        //@ requires Socket(?i, ?o);
+        //@ ensures Socket(i, o) &*& result == o;
+    
+    public void shutdownOutput();
+        //@ requires Socket(?i, ?o);
+        //@ ensures Socket(i, o);
+    
+    public void close();
+        //@ requires Socket(?i, ?o) &*& i.InputStream() &*& o.OutputStream();
+        //@ ensures emp;
+    
+}
+
+public class ServerSocket {
+    
+    //@ predicate ServerSocket();
+    
+    public ServerSocket(int port);
+        //@ requires emp;
+        //@ ensures ServerSocket();
+    
+    public Socket accept();
+        //@ requires ServerSocket();
+        //@ ensures ServerSocket() &*& result.Socket(?i, ?o) &*& i.InputStream() &*& o.OutputStream();
+    
+    public void bind(SocketAddress endpoint) throws IOException /*@ ensures true; @*/;
+        //@ requires ServerSocket();
+        //@ ensures ServerSocket();
+    
+}

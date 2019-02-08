@@ -1,0 +1,16 @@
+cd tests
+  include tests.mysh
+cd ..
+verifast -c -disable_overflow_check PlusOneFunc.jarsrc
+verifast -c -disable_overflow_check AbstractObjectConstruction.jarsrc
+verifast -c -disable_overflow_check SumFunc.jarsrc
+verifast -c -disable_overflow_check Set.jarsrc
+verifast -c -disable_overflow_check Ackermann.jarsrc
+verifast -c -disable_overflow_check IsEvenFunc.jarsrc
+verifast -c -disable_overflow_check Reverse.jarsrc
+verifast -c -disable_overflow_check ProdCons.jarsrc
+verifast -c -disable_overflow_check Dining.jarsrc
+verifast -c -disable_overflow_check SqrtCache.jarsrc
+verifast -c -disable_overflow_check ThreadPool.jarsrc
+verifast -c -disable_overflow_check Stack.jarsrc
+verifast -c -disable_overflow_check Beep.jarsrc

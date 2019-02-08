@@ -1,0 +1,4 @@
+.provides .\contrib.gh#contrib_sum_nonnegative
+.provides .\contrib.gh#create_contrib
+.provides .\contrib.gh#create_contrib_sum
+.provides .\contrib.gh#dispose_contrib

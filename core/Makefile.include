@@ -1,0 +1,122 @@
+BIN = microvisor
+
+# Toolchain
+CC = avr-gcc
+LD = avr-gcc
+AS = avr-as
+AR = avr-ar
+NM = avr-nm
+OBJCOPY = avr-objcopy
+STRIP = avr-strip
+
+MCU = atmega1284p
+OBJECTDIR = obj
+SOURCEDIRS += . ../../core ../../core/crypto
+
+CORE_SOURCEFILES += microvisor.c virt_i.S do_copy_data_lpm.S sha1-asm.S hmac-sha1.c string_boot.S
+
+vpath %.c $(SOURCEDIRS)
+vpath %.S $(SOURCEDIRS)
+
+#CFLAGS += -mmcu=$(MCU) -Wall -Os -gdwarf-2 -fno-strict-aliasing -DF_CPU=3686400UL #-ffixed-r2
+CFLAGS += -mmcu=$(MCU) -Wall -Os -gdwarf-2 -fno-strict-aliasing -DF_CPU=10000000UL #-ffixed-r2
+CFLAGS += ${addprefix -I,$(SOURCEDIRS)}
+ASFLAGS += -mmcu=$(MCU)
+LDFLAGS += -mmcu=$(MCU)
+# Last page of bootloader (256 bytes) reserved for progmem. If we want a more
+# compact bootloader with data following text directly, make custom linker
+# script based on avr51.x which combines .bootmem into .bootloader section
+#LDFLAGS += -Wl,--section-start=.bootmem=0x1FF00
+LDFLAGS += -T ../../core/avr51_bootmem.x
+
+### 1K bootloader
+##LDFLAGS += -Wl,--section-start=.bootloader=0x1FC00 # byte addres, word address = 0xFE00
+##CFLAGS += -DBOOTSIZE=2
+### 2K bootloader
+##LDFLAGS += -Wl,--section-start=.bootloader=0x1F800 # byte addres, word address = 0xFC00
+##CFLAGS += -DBOOTSIZE=2
+# 4K bootloader
+LDFLAGS += -Wl,--section-start=.bootloader=0x1F000 # byte addres, word address = 0xF800
+CFLAGS += -DBOOTSIZE=4
+### 8K bootloader
+##LDFLAGS += -Wl,--section-start=.bootloader=0x1E000 # byte addres, word address = 0xF000
+##CFLAGS += -DBOOTSIZE=8
+
+oname = ${patsubst %.c,%.o,${patsubst %.S,%.o,$(1)}}
+soname = ${patsubst %.c,%.s.o,$(1)}
+
+CORE_OBJECTFILES = ${addprefix $(OBJECTDIR)/,${call oname, $(CORE_SOURCEFILES)}}
+APP_OBJECTFILES = ${addprefix $(OBJECTDIR)/,${call soname, $(APP_SOURCEFILES)}}
+
+# Default target is the ELF
+all: ${BIN}.elf
+
+# Linking and packing objects to ELF
+${BIN}.elf: ${CORE_OBJECTFILES} ${APP_OBJECTFILES}
+	${LD} ${LDFLAGS} -o $@ $^
+
+# Linking and packing objects to custom bin format for OTA programming
+%.bin: %.hex
+	../../core/scripts/ota_image.py $^ $@
+
+# Linking and packing objects to ihex for flashing with avrdude
+%.hex: %.elf
+	${OBJCOPY} $^ -j .text -j .bootloader -j .bootmem -j .data -O ihex $@
+	$(eval DATA_START := $(shell ${NM} -B $^ | grep __data_load_start | awk '{print $$1}'))
+	$(eval DATA_END := $(shell ${NM} -B $^ | grep __data_load_end | awk '{print $$1}'))
+	../../core/scripts/hex_patch_metadata.py $@ ${DATA_START} ${DATA_END}
+
+# App s --> o target. Do substitutions here before assembly.
+$(OBJECTDIR)/%.s.o: $(OBJECTDIR)/%.s
+	sed -i -e 's/[[:space:]]ret$$/	jmp safe_ret/g' $^
+	sed -i -e 's/[[:space:]]reti$$/	jmp safe_reti/g' $^
+	sed -i -e 's/[[:space:]]ijmp$$/	jmp safe_icall_ijmp/g' $^
+	sed -i -e 's/[[:space:]]icall$$/	jmp safe_icall_ijmp/g' $^
+	${AS} ${ASFLAGS} -o $@ $^
+
+# App C --> s target. Intermediate ASM target is forced to do substitutions.
+$(OBJECTDIR)/%.s: %.c | $(OBJECTDIR)
+	${CC} ${CFLAGS} -S -o $@ $^
+
+# uVisor CORE c --> o target
+$(OBJECTDIR)/%.o: %.c | $(OBJECTDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# uVisor CORE S --> s target
+$(OBJECTDIR)/%.s: %.S | $(OBJECTDIR)
+	$(CPP) $(CFLAGS) -o $@ $<
+
+# uVisor CORE S --> o target
+$(OBJECTDIR)/%.o: $(OBJECTDIR)/%.s | $(OBJECTDIR)
+	$(AS) $(ASFLAGS) -o $@ $<
+
+# Create objectdir if removed by clean
+$(OBJECTDIR):
+	mkdir $@
+
+clean:
+	-rm -f ${BIN}.elf
+	-rm -f ${BIN}.hex
+	-rm -f ${BIN}.bin
+	-rm -rf ${OBJECTDIR}
+
+distclean: clean
+
+
+flash:
+		avrdude -p atmega1284p -c jtag3isp -U flash:w:${BIN}.hex -P usb -B4
+fuse8:
+		avrdude -p m1284p -c jtag3isp -P usb -U lfuse:w:0xde:m -U hfuse:w:0xd1:m -U efuse:w:0xfd:m
+fuse4:
+		avrdude -p m1284p -c jtag3isp -P usb -U lfuse:w:0xde:m -U hfuse:w:0xd3:m -U efuse:w:0xfd:m
+fuse2:
+		avrdude -p m1284p -c jtag3isp -P usb -U lfuse:w:0xde:m -U hfuse:w:0xd5:m -U efuse:w:0xfd:m
+
+deploy:
+		avrdude -p atmega1284p -c jtag3isp -U flash:w:${BIN}.bin -P usb -B4
+
+size:
+		avr-size -A --mcu=${MCU} ${BIN}.elf
+
+read:
+		avrdude -p atmega1284p -c jtag3isp -U flash:r:flash.bin:r -P usb -B4

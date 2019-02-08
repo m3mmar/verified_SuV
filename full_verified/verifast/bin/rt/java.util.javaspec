@@ -1,0 +1,302 @@
+package java.util;
+
+/*@
+
+fixpoint pair<t1, t2> update_fst<t1, t2>(t1 v, pair<t1, t2> s) {
+    switch(s) {
+        case pair(a, b): return pair(v, b);
+    }
+}
+
+fixpoint pair<t1, t2> update_snd<t1, t2>(t2 v, pair<t1, t2> s) {
+    switch(s) {
+        case pair(a, b): return pair(a, v);
+    }
+}
+
+fixpoint boolean distinct<t>(list<t> xs) {
+    switch (xs) {
+        case nil: return true;
+        case cons(x, xs0): return !mem(x, xs0) && distinct(xs0);
+    }
+}
+
+lemma_auto(distinct(xs)) void distinct_tail<t>(list<t> xs);
+    requires distinct(xs) == true;
+    ensures distinct(tail(xs)) == true;
+
+lemma_auto(fst_list(xs)) void equal_length<t1, t2>(list<pair<t1, t2> > xs);
+    requires true;
+    ensures length(xs) == length(fst_list(xs)) && length(xs) == length(snd_list(xs));
+
+lemma_auto(length(remove(x, xs))) void length_remove<t>(t x, list<t> xs);
+    requires true;
+    ensures length(xs) - 1 <= length(remove(x, xs)) && length(remove(x, xs)) <= length(xs);
+
+fixpoint t2 in_map<t1, t2>(t1 key, list<pair<t1, t2> > map) {
+    switch(map) {
+        case nil: return default_value<t2>;
+        case cons(m, m0): return fst(m) == key ? snd(m) : in_map(key, m0);
+    }
+}
+
+fixpoint boolean contains_key<t1, t2>(t1 key, list<pair<t1, t2> > map) {
+    switch(map) {
+        case nil: return false;
+        case cons(m, m0): return fst(m) == key ? true : contains_key(key, m0); 
+    }
+}
+
+fixpoint list<pair<t1, t2> > update_value<t1, t2>(t1 key, t2 value, list<pair<t1, t2> > map) {
+    switch(map) {
+        case nil: return nil;
+        case cons(m, m0): return fst(m) == key ? cons(update_snd(value, m), m0) : cons(m, update_value(key, value, m0));
+    }
+}
+
+fixpoint list<pair<t1, t2> > remove_pair<t1, t2>(t1 key, list<pair<t1, t2> > map) {
+    switch(map) {
+        case nil: return nil;
+        case cons(m, m0): return fst(m) == key ? m0 : cons(m, remove_pair(key, m0));
+    }
+}
+
+fixpoint list<pair<t1, t2> > remove_pair_nth<t1, t2>(int n, list<pair<t1, t2> > xs) {
+    switch(xs) {
+        case nil: return nil;
+        case cons(h, t): return n == 0 ? t : cons(h, remove_pair_nth(n - 1, t));
+    }
+}
+
+fixpoint list<t1> fst_list<t1, t2>(list<pair<t1, t2> > s) {
+    switch(s) {
+        case nil: return nil;
+        case cons(x, xs0): return cons(fst(x), fst_list(xs0));
+    }
+}
+
+fixpoint list<t2> snd_list<t1, t2>(list<pair<t1, t2> > s) {
+    switch(s) {
+        case nil: return nil;
+        case cons(x, xs0): return cons(snd(x), snd_list(xs0));
+    }
+}
+
+fixpoint boolean subset<t>(list<t> l1, list<t> l2) {
+    switch(l2) {
+        case nil: return true;
+        case cons(m, m0): return mem(m, l1) == true ? subset(l1, m0) : false; 
+    }
+}
+
+fixpoint boolean not_null(list<Object> xs) {
+    switch (xs) {
+        case nil: return true;
+        case cons(x, xs0): return x != null && not_null(xs0);
+    }
+}
+
+fixpoint option<t> seq_of_list<t>(list<t> xs, int n) {
+    switch (xs) {
+        case nil: return none;
+        case cons(x, xs0): return n == 0 ? some(x) : seq_of_list(xs0, n - 1);
+    }
+}
+
+lemma_auto void seq_of_list_length<t>(list<t> xs, int i);
+    requires 0 <= i;
+    ensures true == ((seq_of_list(xs, i) == none) == (length(xs) <= i));
+
+lemma_auto void seq_of_list_nth<t>(list<t> xs, int i);
+    requires seq_of_list(xs, i) != none;
+    ensures seq_of_list(xs, i) == some(nth(i, xs));
+
+@*/
+
+public interface Iterator<E>{
+    
+    //@ predicate Iterator(fixpoint(int, option<Object>) elements, option<int> currentIndex, int nextIndex);
+    //@ predicate Iterator_removals(list<int> indices);
+    
+    boolean hasNext();
+        //@ requires Iterator(?es, ?c, ?n);
+        //@ ensures Iterator(es, c, n) &*& result ? es(n) != none : es(n) == none; // Force case split.
+    
+    E next();
+        //@ requires Iterator(?es, ?c, ?n) &*& es(n) != none;
+        //@ ensures Iterator(es, some(n), n + 1) &*& result == the(es(n));
+    
+    void remove();
+        //@ requires Iterator(?es, ?c, ?n) &*& Iterator_removals(?rs) &*& c != none;
+        //@ ensures Iterator(es, none, n) &*& Iterator_removals(cons(the(c), rs));
+    
+}
+
+public interface Collection<E> extends Iterable<E> {
+
+}
+
+/*@
+
+fixpoint list<t> remove_nths<t>(list<int> ns, list<t> xs) {
+    switch (ns) {
+        case nil: return xs;
+        case cons(n, ns0): return remove_nths(ns0, remove_nth(n, xs));
+    }
+}
+
+@*/
+
+//@ predicate listIsCollection(List first, Collection second) = second == first;
+
+public interface List<E> extends Collection<E> {
+    
+    //@ predicate List(list<Object> elements);
+    
+    /*@
+    
+    lemma void listToIterable();
+        requires [?f]List(?es);
+        ensures  [f]Iterable(es);
+    
+    lemma void iterableToList();
+       requires [?f]Iterable(?es);
+       ensures  [f]List(es);
+
+    @*/
+    
+    int size();
+        //@ requires [?f]List(?es);
+        //@ ensures [f]List(es) &*& result == length(es);
+    
+    E get(int index);
+        //@ requires [?f]List(?es) &*& 0 <= index &*& index < length(es); 
+        //@ ensures [f]List(es) &*& result == nth(index, es);
+    
+    Iterator iterator();
+        //@ requires [?f]Iterable(?es);
+        /*@
+        ensures
+            result.Iterator((seq_of_list)(es), none, 0) &*&
+            (f == 1 ? result.Iterator_removals(nil) : true) &*&
+            Iterable_iterating(this.getClass())(this, es, f, result);
+        @*/
+    
+    /*@
+    
+    lemma void destroyIterator();
+        requires Iterable_iterating(this.getClass())(this, ?es, 1, ?it) &*& it.Iterator(_, _, _) &*& it.Iterator_removals(?rs);
+        ensures Iterable(remove_nths(rs, es));
+    
+    @*/
+    
+    boolean add(E e);
+        //@ requires List(?es);
+        //@ ensures List(append(es, cons(e, nil))) &*& result;
+
+    boolean addAll(Collection other);
+        //@ requires List(?es) &*& listIsCollection(?l, other) &*& l.List(?other_es);
+        //@ ensures List(append(es, other_es)) &*& l.List(other_es);
+    
+    E remove(int index);
+        //@ requires List(?es) &*& 0 <= index &*& index < length(es);
+        //@ ensures List(remove_nth(index, es)) &*& result == nth(index, es);
+    
+}
+
+public class ArrayList<E> implements List<E> {
+    
+    public ArrayList();
+        //@ requires emp;
+        //@ ensures List(nil);
+    
+}
+
+//@ fixpoint int list_of_byte_hashcode(list<byte> bs);
+
+public class Arrays {
+    
+    public static <E> List<E> asList(E[] a);
+        //@ requires [?f]a[..] |-> ?es;
+        //@ ensures [f]a[..] |-> es &*& result.List(es);
+   
+    static boolean equals(byte[] a1, byte[] a2);
+        //@ requires [?f1]a1[..] |-> ?es1 &*& [?f2]a2[..] |-> ?es2;
+        //@ ensures [f1]a1[..] |-> es1 &*& [f2]a2[..] |-> es2 &*& result == (es1 == es2);
+    
+    static int hashCode(byte[] a);
+        //@ requires [?f]a[..] |-> ?es;
+        //@ ensures [f]a[..] |-> es &*& result == list_of_byte_hashcode(es);   
+}
+
+public interface Set<E> extends Collection<E> {
+    
+    //@ predicate Set(list<Object> elements);
+    
+    /*@
+    
+    lemma void setToIterable();
+        requires [?f]Set(?es);
+        ensures  [f]Iterable(es);
+    
+    lemma void iterableToSet();
+       requires [?f]Iterable(?es);
+       ensures  [f]Set(es);
+        
+    @*/
+    
+    Iterator iterator();
+        //@ requires [?f]Iterable(?es);
+        /*@
+        ensures
+            exists<list<Object> >(?es1) &*& result.Iterator((seq_of_list)(es1), none, 0) &*& Iterable_iterating(this.getClass())(this, es, f, result)
+            &*& subset(es1, es) == true &*& subset(es, es1) == true &*& distinct(es1) == true;
+        @*/
+    
+}
+
+public class HashSet<E> implements Set<E> {
+    
+    HashSet();
+        //@ requires emp;
+        //@ ensures Set(nil);
+    
+}
+
+public interface Map<K,V> {
+    
+    //@ predicate Map(list<pair<Object, Object> > elements);
+    
+}
+
+public class IdentityHashMap<K, V> implements Map<K, V> {
+    
+    IdentityHashMap();
+        //@ requires emp;
+        //@ ensures Map(nil);
+    
+    public V put(K key, V value);
+        //@ requires Map(?es);
+        /*@
+        ensures
+            result == in_map(key, es)
+            &*& contains_key(key, es) == true ? Map(update_value(key, value, es)) : Map(append(es, cons(pair(key, value), nil)));
+        @*/
+    
+    public V get(K key);
+        //@ requires Map(?es) &*& contains_key(key, es) == true;
+        //@ ensures result == in_map(key, es) &*& Map(es) &*& mem(key, fst_list(es)) == true &*& mem(result, snd_list(es)) == true;
+    
+    public boolean containsKey(K key);
+        //@ requires Map(?es);
+        /*@
+        ensures
+            Map(es) &*& result == contains_key(key, es) &*&
+            contains_key(key, es) == mem(key, fst_list(es));
+        @*/
+    
+    public V remove(K key);
+        //@ requires Map(?es);
+        //@ ensures result == in_map(key, es) &*& contains_key(key, es) ? Map(remove_pair(key, es)) : Map(es);
+    
+}

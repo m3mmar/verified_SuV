@@ -1,0 +1,81 @@
+# Script to verify all input/output related examples.
+#
+let verifast_both
+ifz3 verifast
+verifast -prover redux
+in
+
+cd tee
+  verifast_both -shared CRT/io.o CRT/stdio_simple.o tee_out.c tee_unbuffered.c
+  verifast_both -shared io.o stdio_simple.o tee_out.c tee_buffered_while.c
+  verifast_both -shared io.o stdio_simple.o tee_out.c tee_buffered_recursive.c
+cd ..
+cd work-in-progress
+  cd in-memory-io-style
+    verifast_both -shared -I . buffer.c syscall_memory.c
+    verifast_both -shared -I . io_lemma_impl.c
+  cd ..
+  cd in-memory-io-style-v1.1
+    mysh < run.mysh
+  cd ..
+  cd in-memory-io-style-v2
+    verifast_both -allow_assume foralls.o prophecy.o ../../../vstte2012/problem3/problem3.c writehi_readhi.c
+  cd ..
+  cd in-memory-io-style-v3
+    cd 01-producer-consumer-no-iostyle
+      verifast_both -c -allow_assume producer-consumer.c
+    cd ..
+    cd 02-framepresupd
+      verifast_both -c -disable_overflow_check in-memory-splitjoin-framepresupd.c
+    cd ..
+    cd 03-weak
+      verifast_both -c -allow_assume producer-consumer-weak-iostyle.c
+    cd ..
+    cd 04-split-invar
+      ifz3 verifast -prover z3 -c buffer.c
+    cd ..
+  cd ..
+cd ..
+cd in-memory
+  cd writer_cat_reader
+    verifast -prover redux -c main.c cat.c getchar.c putchar.c writer.c
+    verifast -prover redux -c -disable_overflow_check reader.c
+  cd ..
+  cd non_reusable_print_hi
+    verifast -prover redux -c print_hi.c
+  cd ..
+cd ..
+cd matching_brackets
+  verifast_both stdio_simple.o -shared -disable_overflow_check matching_brackets_input.c
+  verifast_both CRT/io.o stdio_simple.o -shared matching_brackets_checker.c
+  verifast_both CRT/io.o stdio_simple.o -shared matching_brackets_output.c
+cd ..
+cd output_anything
+  verifast_both stdio_simple.o bigstar.o -shared output_any_char.c
+  verifast_both stdio_simple.o CRT/io.o bigstar.o -shared output_any_string.c
+cd ..
+cd never_ending_program
+  verifast_both stdio_simple.o -shared yes.c
+  verifast_both CRT/io.o stdio_simple.o -shared infinite_counter.c
+cd ..
+cd hello_world
+  verifast_both stdio_simple.o -shared hello_world.c
+cd ..
+cd read_files_of_file
+  verifast_both io.o stdio_simple.o -shared read_files_of_file.c
+cd ..
+cd buffering_in_library
+  verifast_both stdio_simple.o -shared -c putchar_with_buffer.c
+cd ..
+cd user_sets_contract
+  mysh < verify.mysh
+cd ..
+cd turing_complete
+  verifast_both stdio_simple.o -shared turing_complete.c
+  verifast_both CRT/io.o stdio_simple.o -shared turing_complete_lowtech.c
+  verifast_both CRT/io.o stdio_simple.o -shared turing_complete_underspec_lowtech.c
+cd ..
+cd template_method
+  verifast_both -c TemplateMethod.java
+  verifast_both -c TemplateMethodWhile.java
+cd ..

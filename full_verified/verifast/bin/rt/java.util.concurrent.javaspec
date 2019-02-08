@@ -1,0 +1,79 @@
+package java.util.concurrent;
+
+public interface Executor {
+    
+    //@ predicate Executor();
+    
+    void execute(Runnable run);
+        //@ requires [?f]Executor() &*& run.pre();
+        //@ ensures [f]Executor();
+    
+}
+
+public class Executors {
+    
+    public static Executor newFixedThreadPool(int nThreads);
+        //@ requires true;
+        //@ ensures result.Executor() &*& result != null;
+    
+}
+
+/*@
+
+predicate n_times(int p, predicate() inv) = p == 0 ? emp : inv() &*& n_times(p - 1, inv);
+
+lemma void one_time(predicate() inv); // Shorthand for two close operations
+    requires inv();
+    ensures n_times(1, inv);
+
+predicate semaphore_handle(Semaphore semaphore, predicate() inv, real frac, int permits;);
+
+lemma_auto void semaphore_handle_inv();
+    requires semaphore_handle(?s, ?inv, ?f, ?p);
+    ensures semaphore_handle(s, inv, f, p) &*& s != null &*& 0 < f &*& f <= 1;
+
+@*/
+
+public class Semaphore {
+    
+    //@ predicate Semaphore(predicate() inv);
+    
+    Semaphore(int p);
+        //@ requires n_times(p, ?inv);
+        //@ ensures semaphore_handle(this, inv, 1, p);
+
+    void acquire();
+        //@ requires semaphore_handle(this, ?inv, ?f, ?p);
+        //@ ensures semaphore_handle(this, inv, f, p - 1) &*& inv();
+
+    void release();
+        //@ requires semaphore_handle(this, ?inv, ?f, ?p) &*& inv();
+        //@ ensures semaphore_handle(this, inv, f, p + 1);
+    
+    /*@
+    
+    lemma void splitHandle(real f0, int p0, real f1, int p1);
+        requires semaphore_handle(this, ?inv, f0, p0) &*& 0 < f1 &*& f1 < f0;
+        ensures semaphore_handle(this, inv, f1, p1) &*& semaphore_handle(this, inv, f0 - f1, p0 - p1);
+    
+    lemma void mergeHandles(real f0, int p0, real f1, int p1);
+        requires semaphore_handle(this, ?inv, f0, p0) &*& semaphore_handle(this, inv, f1, p1);
+        ensures semaphore_handle(this, inv, f0 + f1, p0 + p1);
+    
+    lemma void destroy();
+        requires semaphore_handle(this, ?inv, 1, ?p);
+        ensures n_times(p, inv);
+    
+    // Use the lemmas below for a simpler user experience if you don't intend to destroy the semaphore.
+    
+    lemma void leakHandle();
+        requires semaphore_handle(this, ?inv, _, _);
+        ensures [_]Semaphore(inv);
+    
+    lemma void makeHandle();
+        requires [?f]Semaphore(?inv);
+        ensures [f]Semaphore(inv) &*& semaphore_handle(this, inv, _, _);
+    
+    @*/
+    
+}

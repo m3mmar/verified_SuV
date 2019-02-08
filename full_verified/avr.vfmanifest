@@ -1,0 +1,6 @@
+.provides ./avr.h#boot_page_erase
+.provides ./avr.h#boot_page_fill
+.provides ./avr.h#boot_page_write
+.provides ./avr.h#boot_rww_enable
+.provides ./avr.h#boot_spm_busy_wait
+.provides ./avr.h#cli
